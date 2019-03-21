@@ -1,0 +1,84 @@
+# This script meshes a unit square which is cut by the arc of a circle
+# with a given radius. It is intended to test the effects of failing to
+# correctly inverse-map a master node near the edge of the domain.
+
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_cylcut_quad_nonmatching_nogap.jou"
+
+# Clear any existing model
+reset
+
+# The radius of the cylinder we do the cut with. The bigger the
+# radius, the more gentle the curve of the cut.
+# {R = 3}
+
+# Create the bottom half.
+create brick width 1 depth 1 height 1
+create cylinder radius {R} height 1
+move body 2 y {R}
+subtract body 2 from body 1
+
+# Create the top half.
+body 1 copy # this is body 3
+create brick width 1 depth 1 height 1 # this is body 4
+subtract body 3 from body 4
+
+# block 1 on bottom, block 2 on top.
+block 1 surf 29
+block 2 surf 11
+
+# Set up sideset ids and names.
+sideset 1 curve 48
+sideset 1 name 'contact_top'
+sideset 2 curve 18
+sideset 2 name 'contact_bot'
+
+# Set up sidesets for other BCs
+sideset 3 curve 4
+sideset 3 name 'bottom'
+sideset 4 curve 20
+sideset 4 name 'right_bottom'
+sideset 5 curve 53
+sideset 5 name 'right_top'
+sideset 6 curve 36
+sideset 6 name 'top'
+sideset 7 curve 51
+sideset 7 name 'left_top'
+sideset 8 curve 19
+sideset 8 name 'left_bottom'
+
+# The base intervals are multiplied by the interval_multiplier variable
+# to get successively-refined grids.
+# {interval_multiplier = 1}
+
+# Set intervals on the contact interfaces. We set the default slave
+# interval slightly coarser than the master since that has been show
+# to achieve best results in the past.
+curve 48 interval {20 * interval_multiplier}
+curve 18 interval {21 * interval_multiplier}
+
+# Intervals for top
+curve 51 53 interval {6 * interval_multiplier}
+curve 36 interval {13 * interval_multiplier}
+
+# Intervals for bottom
+curve 19 20 interval {7 * interval_multiplier}
+# curve 4 interval ... (this must be the same as the curved boundary interval)
+
+# Mesh top with TRIs
+surf 29 scheme TriDelaunay
+mesh surf 29
+
+# Mesh bottom with QUADs
+surf 11 scheme Map
+mesh surf 11
+
+block 1 element type TRI3
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_cylcut_quad_nonmatching_nogap.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

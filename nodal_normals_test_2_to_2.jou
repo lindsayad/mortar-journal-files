@@ -1,0 +1,76 @@
+# This script meshes a unit square which is split down the middle by
+# an infinitely thin gap with a non-conforming mesh on both sides. The
+# intent is to verify that we can reproduce a hand calculation's value.
+
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_2_to_2.jou"
+
+# Clear any existing model
+reset
+
+# Create outer part
+create brick width 1 depth 1 height 1
+
+# Split in half but don't merge
+webcut body all plane yplane
+
+# Make other webcuts so we can do some merges and simple 1x1 meshing.
+# The offset parameter should be a script variable. If the offset goes
+# to zero, we end up with a "standard" 2x2 mesh with a horizontal slit
+# between the elements.
+webcut body 2 plane xplane offset -0.25
+webcut body 1 plane xplane offset +0.25
+
+# Merge top bodies
+merge body 2 3
+merge body 1 4
+
+# Create block for top
+block 1 surf 19 25
+block 1 name 'top'
+
+# Create block for bottom
+block 2 surf 33 31
+block 2 name 'bottom'
+
+# Sidesets for the "contact" surfaces.
+sideset 1 curve 43 35
+sideset 1 name 'top_contact'
+sideset 2 curve 57 52
+sideset 2 name 'bottom_contact'
+
+# We will probably want other sidesets for specifying BCs too. We
+# number everything counter clockwise starting from the bottom.
+sideset 3 curve 17
+sideset 3 name 'bottom_left'
+sideset 4 curve 18
+sideset 4 name 'bottom_right'
+sideset 5 curve 28
+sideset 5 name 'top_left'
+sideset 6 curve 26
+sideset 6 name 'top_right'
+sideset 7 curve 44 33
+sideset 7 name 'top'
+sideset 8 curve 58 50
+sideset 8 name 'bottom'
+
+# Set intervals and mesh the top
+curve 43 28 35 interval 1
+surf 25 19 scheme Map
+mesh surf 25 19
+
+# Set intervals and mesh the bottom
+curve 17 57 52 interval 1
+surf 33 31 scheme Map
+mesh surf 33 31
+
+# Set the geometric element type to use in each block.
+block 1 element type QUAD4
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_2_to_2.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

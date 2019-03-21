@@ -1,0 +1,82 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_lshaped_nonmatching_nogap.jou"
+
+# This script creates an L-shaped domain with a "long" slave boundary and "short" master boundary.
+
+# Clear any existing model
+reset
+
+# Create left side
+create brick width .5 depth 1 height 1
+move vol 1 x -.25
+
+# Create right side
+create brick width .5 depth .5 height 1
+move vol 2 x .25 y -.25
+
+# Assign surfaces to blocks (1 on left, 2 on right).
+block 1 surf 1
+block 2 surf 7
+
+# Sideset 1 corresponds to the slave ("long") surface.
+sideset 1 curve 1
+sideset 1 name 'slave_side'
+
+# Sideset 2 corresponds to the master ("short") surface.
+sideset 2 curve 15
+sideset 2 name 'master_side'
+
+# Set up top, bottom, left, and right sidesets. These ids are
+# topologically equivalent to the other "offset" and "flat" meshes in
+# this directory.
+sideset 3 curve 4
+sideset 3 name 'bottom_left'
+sideset 4 curve 16
+sideset 4 name 'bottom_right'
+sideset 5 curve 13
+sideset 5 name 'outside_right'
+sideset 6 curve 14
+sideset 6 name 'top_right'
+sideset 7 curve 2
+sideset 7 name 'top_left'
+sideset 8 curve 3
+sideset 8 name 'outside_left'
+
+# The base intervals are multiplied by the interval_multiplier variable
+# to get successively-refined grids.
+# {interval_multiplier = 1}
+
+# The slave side will have "2 * n * interval_multiplier + 1" elements
+# and "n * interval_multiplier" on the master side.
+# {n = 10}
+
+# Slave side (and outside left) interval. Choosing an odd interval for
+# this side and an even interval on the master side should ensure
+# there's a node from the master side which gets inserted in the
+# middle of a slave element.
+curve 1 3 interval {2 * n * interval_multiplier + 1}
+
+# Master side interval
+curve 15 interval {n * interval_multiplier}
+
+# Set intervals on the top and bottom surfaces
+curve 4 16 2 interval {n * interval_multiplier}
+
+# Mesh the part on the left with triangles.
+surf 1 scheme TriDelaunay
+mesh surf 1
+
+# Mesh the part on the right with quads.
+surf 7 scheme Map
+mesh surf 7
+
+# Set the geometric element type to use in each block.
+block 1 element type TRI3
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_lshaped_nonmatching_nogap.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

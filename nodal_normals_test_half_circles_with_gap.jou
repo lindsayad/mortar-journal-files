@@ -1,0 +1,64 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_half_circles_with_gap.jou"
+
+# Clear any existing model
+reset
+
+# Create left side
+create cylinder height 1 Radius 1
+webcut body all plane xplane
+delete body 2
+move body 1 x -1.005
+
+# Create right side
+create cylinder height 1 Radius 1
+webcut body all plane xplane
+delete body 3
+move body 4 x 1.005
+
+# We do not need to merge the bodies since there is a finite width gap between them.
+
+# Make block 1 the left circle, block 2 the right.
+block 1 surf 5
+block 2 surf 22
+
+# Give the blocks names for easier identification.
+block 1 name 'left'
+block 2 name 'right'
+
+# Create circular sidesets on the left and right.
+sideset 1 curve 7
+sideset 1 name 'left_circular'
+sideset 2 curve 28
+sideset 2 name 'right_circular'
+
+# Create sidesets on the left and right outside parts.
+sideset 3 curve 4
+sideset 3 name 'left_outside'
+sideset 4 curve 26
+sideset 4 name 'right_outside'
+
+# Set intervals on the circular arcs. These are slightly mismatched so
+# that the grids do not line up.
+curve 7 interval 21
+curve 28 interval 20
+
+# Mesh the left side with triangles.
+surf 5 scheme TriDelaunay
+mesh surf 5
+
+# Mesh the right triangle with quads. This mesh is not particularly
+# symmetric top to bottom, but that is probably ok.
+surf 22 scheme pave
+mesh surf 22
+
+# Set the geometric element type to use in each block.
+block 1 element type TRI3
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_half_circles_with_gap.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

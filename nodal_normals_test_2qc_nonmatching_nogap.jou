@@ -1,0 +1,84 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_2qc_nonmatching_nogap.jou"
+
+# Clear any existing model
+reset
+
+# Create outer part
+create brick width 1 depth 1 height 1
+
+# Cut with cylinder in lower left corner (creates vol 2).
+# Note: I could not get cylinder webcutting while specifying axis and
+# center to work, but this works!
+webcut volume 1 with cylinder radius .5 axis vertex 4 vertex 7
+
+# Cut with cylinder in upper right corner (creates vol 3).
+webcut volume 1 with cylinder radius .5 axis vertex 2 vertex 5
+
+# Note: We do *not* merge the volumes. That way, there will be
+# a zero width "slit" in the mesh and duplicate nodes, as well as two
+# sideset for the quarter circular arc.
+
+# Make block 1 the parts inside the cylinders, block 2 the rest.  Not
+# sure whether having a disjoint block will cause some other issue...
+block 1 surf 15 25
+block 2 surf 18
+
+# Give the blocks names for easier identification.
+block 1 name 'inside'
+block 2 name 'outside'
+
+# Create sidesets. We don't want to explicitly name these "slave" or
+# "master" since we want to have the flexibility of reversing those
+# definitions later.
+sideset 1 curve 23
+sideset 1 name 'lower_left_cylinder_inside'
+sideset 2 curve 15
+sideset 2 name 'lower_left_cylinder_outside'
+
+sideset 3 curve 18 26
+sideset 3 name 'left'
+sideset 4 curve 34 42
+sideset 4 name 'right'
+
+sideset 5 curve 17 28
+sideset 5 name 'bottom'
+sideset 6 curve 33 44
+sideset 6 name 'top'
+
+sideset 7 curve 39
+sideset 7 name 'upper_right_cylinder_inside'
+sideset 8 curve 31
+sideset 8 name 'upper_right_cylinder_outside'
+
+# The base intervals are multiplied by the interval_multiplier variable
+# to get successively-refined grids.
+# {interval_multiplier = 1}
+
+# Set the mesh interval along the "cylinder inside" surfaces.
+curve 23 39 interval {20 * interval_multiplier}
+
+# Set the mesh interval along the "cylinder outside" surfaces.
+curve 15 31 interval {21 * interval_multiplier}
+
+# Set mesh intervals along the straight legs of the quarter circles.
+# The TriDelaunay default of 6 is too coarse.
+curve 26 28 42 44 interval {8 * interval_multiplier}
+
+# Set mesh intervals on the outer straight sides.
+# The TriDelaunay default of 6 is too coarse.
+curve 17 18 33 34 interval {9 * interval_multiplier}
+
+# Mesh the part inside the quarter-circle with triangles.
+surf 15 18 25 scheme TriDelaunay
+mesh surf 15 18 25
+
+# Set the geometric element type to use in each block.
+block all element type TRI3
+
+# Write to file.
+export mesh "nodal_normals_test_2qc_nonmatching_nogap.e" dimension 2 block all overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

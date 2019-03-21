@@ -1,0 +1,101 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_bias.jou"
+
+# This journal file started life as "subdomain_test_roundhole.jou" but
+# then we modified it to test some things with nodal normal
+# calculations.
+
+# Clear any existing model
+reset
+
+# Create outer part
+create brick width 1 depth 1 height 1
+
+# Create circular arc in bottom left-hand corner, radius=1/sqrt(2)
+create cylinder height 1 Radius 0.70710678118654752440
+move body 2 location -.5 -.5
+
+# Subtract body 2 from body 1 (trying to achieve webcut with something
+# other than a plane).
+subtract body 2 from body 1
+
+# Now recreate the circular part, later we will merge these together
+# but there will be a quarter-circular arc in the surface.
+# Now it is body 3.
+create cylinder height 1 Radius 0.70710678118654752440
+move body 3 location -.5 -.5
+
+# Now create another brick (body 4) to intersect with and form the
+# other piece. The result is still called body 4.
+create brick width 1 depth 1 height 1
+intersect body 3 with body 4
+
+# Continuous case: merge all bodies so there is not a slit in the mesh.
+merge body all
+
+# Make block 1 the part inside the quarter-circle, block 2 the part
+# outside.
+block 1 surf 27
+block 2 surf 11
+
+# Give the blocks names for easier identification.
+block 1 name 'inside'
+block 2 name 'outside'
+
+# Create a sideset for the quarter-circle curved boundary.
+sideset 1 curve 18
+sideset 1 name 'arc'
+
+# Set a biased mesh interval along the quarter circle arc.
+# Observations:
+# .) Given start vertex and fraction < 1, there will be
+#    *large* elements near the start vertex and smaller elements away
+#    from it.
+# .) fractions > 1 seem to have no effect (no biasing).
+# .) You can simultaneously set the interval while biasing, and you
+#    need to make sure the interval is not too large, otherwise you
+#    can end up with a lot of really small elements towards one end or
+#    the other.
+curve 18 scheme bias start vertex 14 fraction .2 interval 9
+curve 44 scheme bias start vertex 14 fraction .2 interval 9
+curve 42 interval 18
+
+# Mesh the part inside the quarter-circle with triangles.
+surf 27 scheme TriDelaunay
+mesh surf 27
+
+# Meshing the outer part:
+
+# With scheme Hole, I get: "ERROR: Surface 11 must have at least 2 loops to be assigned the Hole Primitive scheme."
+# surf 11 scheme Hole
+
+# Pave works, but it produces large numbers of low-valence
+# quadrilaterals. There's a chance this would work better if you
+# changed the intervals on the "far" surfaces... it's probably not
+# wise to specify the intervals on all the surfaces, however.  This
+# seems to lead to a lot more meshing failures...  Making the interval
+# about 5 on the long sides seems to do a reasonable job relative to
+# the other intervals we've already chosen...
+curve 1 2 interval 5
+surf 11 scheme pave
+
+# Scheme Circle fails to mesh, I get ERROR: SurfMapTool: mapped meshing failed
+# surf 11 scheme Circle
+
+# The map scheme works poorly when there is already a biased mesh on
+# the circular part. This also seems to be the default if I don't specify a scheme?
+# surf 11 scheme Map
+
+# Actually do the meshing
+mesh surf 11
+
+# Set the geometric element type to use in each block.
+block 1 element type TRI3
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_bias.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

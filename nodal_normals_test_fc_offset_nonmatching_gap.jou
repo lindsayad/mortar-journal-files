@@ -1,0 +1,95 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_fc_offset_nonmatching_gap.jou"
+
+# Clear any existing model
+reset
+
+# Create outer part
+create brick width 1 depth 1 height 1
+
+# Create circle centered at origin.
+create cylinder height 1 Radius 0.25
+move vol 2 x 0.125 y 0.125
+
+# Subtract cylinder from brick
+subtract body 2 from body 1
+
+# Now recreate the circular part, later we will merge these together
+# but there will be a quarter-circular arc in the surface.
+# Now it is body 3.
+create cylinder height 1 Radius 0.24
+move vol 3 location x 0.125 y 0.125
+
+# Block 1 = inside circle
+# Block 2 = outside circle
+block 1 surf 15
+block 2 surf 11
+
+# Give the blocks names for easier identification.
+block 1 name 'inside'
+block 2 name 'outside'
+
+# Create a sideset for the circle relative to the inside block.
+sideset 1 curve 18
+sideset 1 name 'arc_inside'
+
+# Create a sideset for the circle relative to the outside block.
+sideset 2 curve 16
+sideset 2 name 'arc_outside'
+
+# The exterior left side
+sideset 3 curve 3
+sideset 3 name 'left'
+
+# The exterior right side
+sideset 4 curve 1
+sideset 4 name 'right'
+
+# The exterior bottom side
+sideset 5 curve 4
+sideset 5 name 'bottom'
+
+# The exterior top side
+sideset 6 curve 2
+sideset 6 name 'top'
+
+# The base intervals are multiplied by the interval_multiplier variable
+# to get successively-refined grids.
+# {interval_multiplier = 1}
+
+# Set the mesh interval along the quarter circle arcs. Setting no
+# interval results in 14 element faces on the boundary. 20 seems to
+# generate something a little better looking. Here, we use mismatched
+# intervals to test the nonconforming initial mesh case. This should
+# work fine when there is an infinitesimal width "slit" in the mesh...
+curve 18 interval {20 * interval_multiplier}
+curve 16 interval {21 * interval_multiplier}
+
+# Set the mesh interval on the outside boundary. This number should be
+# 20 if you want to match the quarter-circle mesh case's boundary
+# interval (since there were 10 intervals on the half side).
+#
+# Unfortunately... I see different behavior on laptop/workstation when
+# changing this number.
+# interval 10: works on laptop, fails on workstation
+# interval 11: fails on laptop, works on workstation with "xi^(2) value mismatch."
+curve 1 2 3 4 interval {10 * interval_multiplier}
+
+# Mesh the part inside the quarter-circle with triangles.
+surf 15 scheme TriDelaunay
+mesh surf 15
+
+# Mesh the outside part using Delaunay
+surf 11 scheme TriDelaunay
+mesh surf 11
+
+# Set the geometric element type to use in each block.
+block 1 element type TRI3
+block 2 element type TRI3
+
+# Write to file.
+export mesh "nodal_normals_test_fc_offset_nonmatching_gap.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:

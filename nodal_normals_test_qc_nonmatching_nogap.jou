@@ -1,0 +1,100 @@
+# cd '/Users/petejw/code/peterson_git/cubit/nodal_normals'
+# play "nodal_normals_test_qc_nonmatching_nogap.jou"
+
+# Clear any existing model
+reset
+
+# Create outer part
+create brick width 1 depth 1 height 1
+
+# Create circular arc in bottom left-hand corner, radius=1/sqrt(2)
+create cylinder height 1 Radius 0.70710678118654752440
+move body 2 location -.5 -.5
+
+# Subtract body 2 from body 1 (trying to achieve webcut with something
+# other than a plane).
+subtract body 2 from body 1
+
+# Now recreate the circular part, later we will merge these together
+# but there will be a quarter-circular arc in the surface.
+# Now it is body 3.
+create cylinder height 1 Radius 0.70710678118654752440
+move body 3 location -.5 -.5
+
+# Now create another brick (body 4) to intersect with and form the
+# other piece. The result is still called body 4.
+create brick width 1 depth 1 height 1
+intersect body 3 with body 4
+
+# In this case, we do *not* merge the bodies. That way, there will be
+# a zero width "slit" in the mesh and duplicate nodes, as well as two
+# sideset for the quarter circular arc. This may also change the numbering
+# of the remaining surfaces, blocks, sides, etc.
+# merge body all
+
+# Make block 1 the part inside the quarter-circle, block 2 the part
+# outside.
+block 1 surf 27
+block 2 surf 11
+
+# Give the blocks names for easier identification.
+block 1 name 'inside'
+block 2 name 'outside'
+
+# Create a sideset for the quarter-circle curved boundary.
+# Relative to block 1 (aka body 4, the quarter circle), this is curve 38 -> sideset 1
+# Relative to block 2 (aka body 1, the outside), this is still curve 18 -> sideset 2
+sideset 1 curve 38
+sideset 1 name 'arc_inside'
+sideset 2 curve 18
+sideset 2 name 'arc_outside'
+sideset 3 curve 20 42
+sideset 3 name 'left'
+sideset 4 curve 1
+sideset 4 name 'right'
+sideset 5 curve 44 19
+sideset 5 name 'bottom'
+sideset 6 curve 2
+sideset 6 name 'top'
+
+# The base intervals are multiplied by the interval_multiplier variable
+# to get successively-refined grids.
+# {interval_multiplier = 1}
+
+# Set the mesh interval along the quarter circle arcs. Setting no
+# interval results in 14 element faces on the boundary. 20 seems to
+# generate something a little better looking. Here, we use mismatched
+# intervals to test the nonconforming initial mesh case. This should
+# work fine when there is an infinitesimal width "slit" in the mesh...
+curve 18 interval {20 * interval_multiplier}
+curve 38 interval {21 * interval_multiplier}
+
+# Number of elements along the straight legs of the quarter circle.
+curve 42 44 interval {9 * interval_multiplier}
+
+# Set the mesh interval on the short edge of the outer part.  The
+# default seems to give 4 elements. Note that the other intervals are
+# already determined by the quarter circular curve's interval.
+curve 19 20 interval {6 * interval_multiplier}
+
+# Mesh the part inside the quarter-circle with triangles.
+surf 27 scheme TriDelaunay
+mesh surf 27
+
+# The map scheme gives a result similar to what David's original mesh
+# had, although in my opinion it is more symmetric, and since the
+# circle is relatively larger, the elements in the corner are not
+# quite as elongated.
+surf 11 scheme Map
+mesh surf 11
+
+# Set the geometric element type to use in each block.
+block 1 element type TRI3
+block 2 element type QUAD4
+
+# Write to file.
+export mesh "nodal_normals_test_qc_nonmatching_nogap.e" dimension 2 block 1 2 overwrite
+
+# Local Variables:
+# mode: shell-script
+# End:
